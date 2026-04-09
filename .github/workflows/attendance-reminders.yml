@@ -1,0 +1,46 @@
+name: Attendance reminders
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+    inputs:
+      test:
+        description: "Send a test notification now"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+      employeeSlug:
+        description: "Employee slug for test notification"
+        required: false
+        default: "ashen"
+
+jobs:
+  send-reminders:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Install dependencies
+        working-directory: functions
+        run: npm ci
+
+      - name: Send reminders
+        working-directory: functions
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          ATTENDANCE_APP_URL: https://attendance.netlify.app/
+          FORCE_TEST_NOTIFICATION: ${{ inputs.test }}
+          TEST_EMPLOYEE_SLUG: ${{ inputs.employeeSlug }}
+        run: node send-reminders.js
